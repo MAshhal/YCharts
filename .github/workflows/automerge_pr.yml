@@ -1,0 +1,62 @@
+name: Merge Renovate PRs into version_updates branch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */12 * * *'  # This will run every 12 hours
+  pull_request:
+    types: [opened, synchronize, closed]
+
+jobs:
+  merge_renovate_prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Git for commit signing
+        run: |
+          git config --global user.name "Renovate Bot"
+          git config --global user.email "renovate@app.gitlab.com"
+
+      - name: Check if the `version_updates` branch exists
+        id: check_branch
+        run: |
+          # Check if the version_updates branch already exists
+          if git ls-remote --heads origin version_updates; then
+            echo "Branch version_updates already exists. Skipping branch creation."
+            echo "::set-output name=branch_exists::true"
+          else
+            echo "Branch version_updates does not exist. Creating new branch."
+            echo "::set-output name=branch_exists::false"
+          fi
+
+      - name: Create and merge into `version_updates` branch
+        if: steps.check_branch.outputs.branch_exists == 'false'
+        run: |
+          # Create a new branch named `version_updates` if it doesn't exist
+          git checkout -b version_updates
+
+          # Add the remote origin if it's not already configured
+          git remote add origin https://github.com/${{ github.repository }}.git
+
+          # Pull the latest changes from the base branch (main)
+          git pull origin main
+
+          # Merge the PR into the new branch
+          git merge --no-ff ${{ github.event.pull_request.head.ref }} -m "Merging Renovate PR into version_updates"
+          
+          # Push the new branch
+          git push origin version_updates
+
+      - name: Merge into existing `version_updates` branch
+        if: steps.check_branch.outputs.branch_exists == 'true'
+        run: |
+          # If the branch exists, merge the PR into the existing branch
+          git checkout version_updates
+          
+          # Merge the PR into the existing branch
+          git merge --no-ff ${{ github.event.pull_request.head.ref }} -m "Merging Renovate PR into version_updates"
+
+          # Push the changes
+          git push origin version_updates
