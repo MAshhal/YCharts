@@ -2,8 +2,8 @@ name: Merge Renovate PRs into version_updates branch
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */12 * * *'  # This will run every 12 hours
+  # schedule:
+    # - cron: '0 */12 * * *'  # This will run every 12 hours
   pull_request:
     types: [opened, synchronize, closed]
 
